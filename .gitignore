@@ -4,6 +4,9 @@
 # Large downloaded data files
 download/
 
+# Mac metadata
+.DS_Store
+
 # Python
 __pycache__/
 *.egg-info/
