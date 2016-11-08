@@ -58,7 +58,7 @@ for k in ['model a','model b']:
     print(X[k].shape)
 
 
-# In[80]:
+# In[7]:
 
 mutations = {
     '7157': 'TP53',   # tumor protein p53
@@ -74,7 +74,7 @@ mutations = {
 
 # ## Median absolute deviation feature selection
 
-# In[81]:
+# In[8]:
 
 def fs_mad(x, y):
     """    
@@ -86,14 +86,14 @@ def fs_mad(x, y):
 
 # ## Define pipeline and Cross validation model fitting
 
-# In[82]:
+# In[29]:
 
 # Parameter Sweep for Hyperparameters
 
 param_grid = {
     'classify__loss': ['log'],
     'classify__penalty': ['elasticnet'],
-    'classify__alpha': [1],#10.0 ** np.linspace(-3, 1, 10),
+    'classify__alpha': 10.0 ** np.linspace(-3, 1, 10),
     'classify__l1_ratio': [0.15],
 }
 
@@ -119,9 +119,11 @@ combo_pipeline = Pipeline([
 covariates_pipeline = Pipeline(steps=[
     ('imputer', Imputer()),
     ('standardize', StandardScaler()),
-    ('select', SelectKBest(fs_mad,'all')),
     ('classify', SGDClassifier(random_state=0, class_weight='balanced'))
 ])
+
+
+# In[30]:
 
 cv_pipeline = {}
 cv_pipeline['model a'] = GridSearchCV(estimator=covariates_pipeline, param_grid=param_grid, scoring='roc_auc')
@@ -130,7 +132,7 @@ cv_pipeline['model b'] = GridSearchCV(estimator=combo_pipeline, param_grid=param
 
 # ## Functions to get statistics for a given model 
 
-# In[83]:
+# In[39]:
 
 # Get statistics for a given model. 
 
@@ -138,9 +140,7 @@ def get_aurocs(X, y, pipeline, series, model_type):
     """
     Fit the classifier for the given mutation (y) and output predictions for it
     """
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=0)
-    y_train[0] = 1
-    y_test[0] = 1
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, stratify=y, random_state=0)
     pipeline.fit(X=X_train, y=y_train)
     y_pred_train = pipeline.decision_function(X_train)
     y_pred_test = pipeline.decision_function(X_test)
@@ -153,6 +153,8 @@ def get_aurocs(X, y, pipeline, series, model_type):
     series['testing_auroc'] = roc_auc_score(y_test, y_pred_test)
     series['n_pos_coeffs'] = n_pos
     series['n_neg_coeffs'] = n_neg
+    series['n_positive_mutation'] = sum(y==1)
+    series['n_negative_mutation'] = sum(y==0)
     series['cum_rank_cov_feat'] = cov_ranks.sum()
     series['median_rank_cov_feat'] = np.median(cov_ranks)
     series['mean_rank_cov_feat'] = np.mean(cov_ranks)
@@ -181,12 +183,13 @@ def get_coeffs(pipeline, X_train, model_type):
     final_classifier = final_pipeline.named_steps['classify']
     
     # Get indices of features
-    if model_type == 'model a': select_step = 'select'
-    else: select_step = 'features'
-    select_indices = final_pipeline.named_steps[select_step].transform(
-        np.arange(len(X_train.columns)).reshape(1, -1)
-    ).tolist()
-    if model_type =='model b': select_indices = [x for sublist in select_indices for x in sublist]
+    if model_type == 'model a': 
+        select_indices = list(range(len(covariates.columns.values)))
+    else:
+        select_indices = final_pipeline.named_steps['features'].transform(
+            np.arange(len(X_train.columns)).reshape(1, -1)
+        ).tolist()
+        select_indices = [x for sublist in select_indices for x in sublist]
     
     # Make df features, weights
     coef_df = pd.DataFrame.from_items([
@@ -219,26 +222,27 @@ auroc_dfs = {}
 
 # ## Train the models.
 
-# In[84]:
+# In[40]:
 
-get_ipython().run_cell_magic('time', '', '# Train model a: covariates only.\nwarnings.filterwarnings("ignore") # ignore deprecation warning for grid_scores_\nrows = list()\nfor m in list(mutations):\n    series = pd.Series()\n    series[\'mutation\'] = m\n    series[\'symbol\'] = mutations[m]\n    rows.append(get_aurocs(X[\'model a\'].iloc[0:1000], Y[m][0:1000], cv_pipeline[\'model a\'], series, \'model a\'))\nauroc_dfs[\'model a\'] = pd.DataFrame(rows)\nauroc_dfs[\'model a\'].sort_values([\'symbol\', \'testing_auroc\'], ascending=[True, False], inplace=True)')
-
-
-# In[85]:
-
-get_ipython().run_cell_magic('time', '', '# Train model b: covariates with gene expression data.\nwarnings.filterwarnings("ignore") # ignore deprecation warning for grid_scores_\nrows = list()\nfor m in list(mutations):\n    series = pd.Series()\n    series[\'mutation\'] = m\n    series[\'symbol\'] = mutations[m]\n    rows.append(get_aurocs(X[\'model b\'].iloc[0:1000,:], Y[m][0:1000], cv_pipeline[\'model b\'], series, \'model b\'))\nauroc_dfs[\'model b\'] = pd.DataFrame(rows)\nauroc_dfs[\'model b\'].sort_values([\'symbol\', \'testing_auroc\'], ascending=[True, False], inplace=True)')
+get_ipython().run_cell_magic('time', '', '# Train model a: covariates only.\nwarnings.filterwarnings("ignore") # ignore deprecation warning for grid_scores_\nrows = list()\nfor m in list(mutations):\n    series = pd.Series()\n    series[\'mutation\'] = m\n    series[\'symbol\'] = mutations[m]\n    rows.append(get_aurocs(X[\'model a\'], Y[m], cv_pipeline[\'model a\'], series, \'model a\'))\nauroc_dfs[\'model a\'] = pd.DataFrame(rows)\nauroc_dfs[\'model a\'].sort_values([\'symbol\', \'testing_auroc\'], ascending=[True, False], inplace=True)\ndisplay(auroc_dfs[\'model a\'])')
 
 
-# In[86]:
+# In[12]:
 
-display(auroc_dfs['model a'])
-display(auroc_dfs['model b'])
+get_ipython().run_cell_magic('time', '', '# Train model b: covariates with gene expression data.\nwarnings.filterwarnings("ignore") # ignore deprecation warning for grid_scores_\nrows = list()\nfor m in list(mutations):\n    series = pd.Series()\n    series[\'mutation\'] = m\n    series[\'symbol\'] = mutations[m]\n    rows.append(get_aurocs(X[\'model b\'], Y[m], cv_pipeline[\'model b\'], series, \'model b\'))\nauroc_dfs[\'model b\'] = pd.DataFrame(rows)\nauroc_dfs[\'model b\'].sort_values([\'symbol\', \'testing_auroc\'], ascending=[True, False], inplace=True)')
 
 
-# In[87]:
+# In[34]:
 
-auroc_dfs['model a'].to_csv('auroc_covariates_only.tsv', index=False, sep='\t', float_format='%.5g')
-auroc_dfs['model b'].to_csv('auroc_covariates_and_expression.tsv', index=False, sep='\t', float_format='%.5g')
+auroc_dfs['model a']['model'] = 'covariates_only'
+auroc_dfs['model b']['model'] = 'combined'
+auroc_df = pd.concat([auroc_dfs['model a'],auroc_dfs['model b']])
+auroc_df.to_csv("./auroc_df.tsv", sep="\t", float_format="%.3g", index=False)
+auroc_df.head(2)
+
+
+# In[19]:
+
 auroc_dfs['diff_models_ab'] = auroc_dfs['model b'].loc[:,'mean_cv_auroc':]-auroc_dfs['model a'].loc[:,'mean_cv_auroc':]
 auroc_dfs['diff_models_ab'][['mutation', 'symbol']] = auroc_dfs['model b'].loc[:, ['mutation', 'symbol']]
 auroc_dfs['diff_models_ab']
@@ -246,7 +250,7 @@ auroc_dfs['diff_models_ab']
 
 # # Covariates only vs covariates+expression model
 
-# In[88]:
+# In[20]:
 
 plot_df = pd.melt(auroc_dfs['diff_models_ab'], id_vars='symbol', value_vars=['mean_cv_auroc', 'training_auroc', 'testing_auroc'], var_name='kind', value_name='delta auroc')
 grid = sns.factorplot(y='symbol', x='delta auroc', hue='kind', data=plot_df, kind="bar")
