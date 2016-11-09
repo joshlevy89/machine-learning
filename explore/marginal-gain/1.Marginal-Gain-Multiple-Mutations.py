@@ -86,7 +86,7 @@ def fs_mad(x, y):
 
 # ## Define pipeline and Cross validation model fitting
 
-# In[29]:
+# In[9]:
 
 # Parameter Sweep for Hyperparameters
 
@@ -123,7 +123,7 @@ covariates_pipeline = Pipeline(steps=[
 ])
 
 
-# In[30]:
+# In[10]:
 
 cv_pipeline = {}
 cv_pipeline['model a'] = GridSearchCV(estimator=covariates_pipeline, param_grid=param_grid, scoring='roc_auc')
@@ -132,7 +132,7 @@ cv_pipeline['model b'] = GridSearchCV(estimator=combo_pipeline, param_grid=param
 
 # ## Functions to get statistics for a given model 
 
-# In[39]:
+# In[11]:
 
 # Get statistics for a given model. 
 
@@ -222,27 +222,29 @@ auroc_dfs = {}
 
 # ## Train the models.
 
-# In[40]:
+# In[12]:
 
 get_ipython().run_cell_magic('time', '', '# Train model a: covariates only.\nwarnings.filterwarnings("ignore") # ignore deprecation warning for grid_scores_\nrows = list()\nfor m in list(mutations):\n    series = pd.Series()\n    series[\'mutation\'] = m\n    series[\'symbol\'] = mutations[m]\n    rows.append(get_aurocs(X[\'model a\'], Y[m], cv_pipeline[\'model a\'], series, \'model a\'))\nauroc_dfs[\'model a\'] = pd.DataFrame(rows)\nauroc_dfs[\'model a\'].sort_values([\'symbol\', \'testing_auroc\'], ascending=[True, False], inplace=True)\ndisplay(auroc_dfs[\'model a\'])')
 
 
-# In[12]:
+# In[13]:
 
 get_ipython().run_cell_magic('time', '', '# Train model b: covariates with gene expression data.\nwarnings.filterwarnings("ignore") # ignore deprecation warning for grid_scores_\nrows = list()\nfor m in list(mutations):\n    series = pd.Series()\n    series[\'mutation\'] = m\n    series[\'symbol\'] = mutations[m]\n    rows.append(get_aurocs(X[\'model b\'], Y[m], cv_pipeline[\'model b\'], series, \'model b\'))\nauroc_dfs[\'model b\'] = pd.DataFrame(rows)\nauroc_dfs[\'model b\'].sort_values([\'symbol\', \'testing_auroc\'], ascending=[True, False], inplace=True)')
 
 
-# In[34]:
+# In[32]:
 
 auroc_dfs['model a']['model'] = 'covariates_only'
 auroc_dfs['model b']['model'] = 'combined'
 auroc_df = pd.concat([auroc_dfs['model a'],auroc_dfs['model b']])
 auroc_df.to_csv("./auroc_df.tsv", sep="\t", float_format="%.3g", index=False)
-auroc_df.head(2)
+display(auroc_df)
 
 
-# In[19]:
+# In[30]:
 
+auroc_dfs['model a'] = auroc_dfs['model a'].drop('model',axis=1)
+auroc_dfs['model b'] = auroc_dfs['model b'].drop('model',axis=1)
 auroc_dfs['diff_models_ab'] = auroc_dfs['model b'].loc[:,'mean_cv_auroc':]-auroc_dfs['model a'].loc[:,'mean_cv_auroc':]
 auroc_dfs['diff_models_ab'][['mutation', 'symbol']] = auroc_dfs['model b'].loc[:, ['mutation', 'symbol']]
 auroc_dfs['diff_models_ab']
@@ -250,7 +252,7 @@ auroc_dfs['diff_models_ab']
 
 # # Covariates only vs covariates+expression model
 
-# In[20]:
+# In[31]:
 
 plot_df = pd.melt(auroc_dfs['diff_models_ab'], id_vars='symbol', value_vars=['mean_cv_auroc', 'training_auroc', 'testing_auroc'], var_name='kind', value_name='delta auroc')
 grid = sns.factorplot(y='symbol', x='delta auroc', hue='kind', data=plot_df, kind="bar")
