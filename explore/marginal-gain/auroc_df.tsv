@@ -1,3 +1,3 @@
-mutation	symbol	mean_cv_auroc	training_auroc	testing_auroc	best_l1_ratio	best_alpha	n_pos_coeffs	n_neg_coeffs	n_positive_mutation	n_negative_mutation	cum_rank_cov_feat	median_rank_cov_feat	mean_rank_cov_feat	model
-5979	RET	0.891	0.807	0.859	0.2	0.1	4	1	117	7189	2415	34.5	34.5	covariates_only
-5979	RET	0.876	0.5	0.5	0.2	1	0	0	117	7189	933406	1.36e+04	1.33e+04	combined
+mutation	symbol	training_auroc	testing_auroc	model
+5979	RET	0.807	0.859	covariates_only
+5979	RET	0.774	0.743	combined
