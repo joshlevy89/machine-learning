@@ -214,7 +214,7 @@ auroc_df.to_csv("./auroc_df.tsv", sep="\t", float_format="%.3g", index=False)
 display(auroc_df)
 
 
-# In[15]:
+# In[35]:
 
 auroc_dfs['model a'] = auroc_dfs['model a'].drop('model',axis=1)
 auroc_dfs['model b'] = auroc_dfs['model b'].drop('model',axis=1)
@@ -225,8 +225,13 @@ auroc_dfs['diff_models_ab']
 
 # # Covariates only vs covariates+expression model
 
-# In[16]:
+# In[36]:
 
 plot_df = pd.melt(auroc_dfs['diff_models_ab'], id_vars='symbol', value_vars=['mean_cv_auroc', 'training_auroc', 'testing_auroc'], var_name='kind', value_name='delta auroc')
 grid = sns.factorplot(y='symbol', x='delta auroc', hue='kind', data=plot_df, kind="bar")
+
+
+# In[ ]:
+
+
 
