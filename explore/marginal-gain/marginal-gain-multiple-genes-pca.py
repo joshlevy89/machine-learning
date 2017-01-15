@@ -205,7 +205,7 @@ def grid_scores_to_df(grid_scores):
     return grid_aurocs
 
 
-# In[51]:
+# In[77]:
 
 # Helper visualization functions.
 def visualize_grid_aurocs(grid_aurocs, gene_type=None, ax=None):
@@ -229,8 +229,8 @@ def visualize_best_estimator_aurocs(estimator_aurocs, gene_type=None, ax=None, t
     plot_df = pd.melt(estimator_aurocs, id_vars='symbol', value_vars=['mean_cv_auroc', 'training_auroc', 
                                                 'testing_auroc'], var_name='kind', value_name='aurocs')
     ax = sns.barplot(y='symbol', x='aurocs', hue='kind', data=plot_df,ax=ax)
-    if training_data_type == None: ax.set(xlabel='aurocs')
-    elif training_data_type == 'marginal gain': ax.set(xlabel='delta aurocs')
+    if training_data_type == 'marginal_gain': ax.set(xlabel='delta aurocs')
+    else: ax.set(xlabel='aurocs')
     ax.legend(bbox_to_anchor=(.65, 1.1), loc=2, borderaxespad=0.)
     plt.setp(ax.get_yticklabels(), rotation=0)
     if gene_type != None: ax.set_title(gene_type, fontsize=15)
@@ -263,7 +263,7 @@ def visualize_categories(data, plot_type, training_data_type):
 all_best_estimator_aurocs_covariates, all_grid_aurocs_covariates = train_and_evaluate(covariates, pipeline)
 
 
-# In[53]:
+# In[78]:
 
 # Visualize covariates data
 visualize_categories(all_best_estimator_aurocs_covariates, 'best_estimator', 'covariates')
@@ -276,7 +276,7 @@ visualize_categories(all_grid_aurocs_covariates, 'grid', 'covariates')
 all_best_estimator_aurocs_expression, all_grid_aurocs_expression = train_and_evaluate(expression_pca, pipeline)
 
 
-# In[55]:
+# In[79]:
 
 # Visualize expression data
 visualize_categories(all_best_estimator_aurocs_expression, 'best_estimator', 'expression')
@@ -289,14 +289,14 @@ visualize_categories(all_grid_aurocs_expression, 'grid', 'expression')
 all_best_estimator_aurocs_combined, all_grid_aurocs_combined = train_and_evaluate(combined, pipeline)
 
 
-# In[57]:
+# In[80]:
 
 # Visualize combined data
 visualize_categories(all_best_estimator_aurocs_combined, 'best_estimator', 'combined')
 visualize_categories(all_grid_aurocs_combined, 'grid', 'combined')
 
 
-# In[58]:
+# In[81]:
 
 # Display difference in auroc between combined and covariates only 
 diff_aurocs = all_best_estimator_aurocs_combined.iloc[:,0:3] - all_best_estimator_aurocs_covariates.iloc[:,0:3]
@@ -322,13 +322,15 @@ visualize_marginal_gain([a1,a2,a3], 'Mean marginal gain',ax2)
 visualize_marginal_gain([m1,m2,m3], 'Median marginal gain',ax3)
 
 
-# In[60]:
+# In[76]:
 
 # Is there a relationship between marginal gain and number of mutations?
 def visualize_marginal_vs_n_mutations(auroc_type,color,ax):
     x = np.array(all_best_estimator_aurocs_combined['n_positive_mutation']); x = x.reshape(len(x),1)
     y = np.array(diff_aurocs[auroc_type]); y = y.reshape(len(y),1)
     ax.scatter(x=x, y=y,color=color)
+    ax.set(xlabel="number of mutations")
+    ax.set(ylabel="delta auroc (combined - covariates only)")
     ax.set_title(auroc_type)
     
 f, (ax1, ax2,ax3) = plt.subplots(ncols=3, figsize=(16,4))

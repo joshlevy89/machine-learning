@@ -165,7 +165,7 @@ def grid_scores_to_df(grid_scores):
     return grid_aurocs
 
 
-# In[19]:
+# In[30]:
 
 # Helper visualization functions.
 def visualize_grid_aurocs(grid_aurocs, gene_type=None, ax=None):
@@ -187,8 +187,8 @@ def visualize_best_estimator_aurocs(estimator_aurocs, gene_type=None, ax=None, t
     plot_df = pd.melt(estimator_aurocs, id_vars='symbol', value_vars=['mean_cv_auroc', 'training_auroc', 
                                                 'testing_auroc'], var_name='kind', value_name='aurocs')
     ax = sns.barplot(y='symbol', x='aurocs', hue='kind', data=plot_df,ax=ax)
-    if training_data_type == None: ax.set(xlabel='aurocs')
-    elif training_data_type == 'marginal gain': ax.set(xlabel='delta aurocs')
+    if training_data_type == 'marginal_gain': ax.set(xlabel='delta aurocs')
+    else: ax.set(xlabel='aurocs')
     ax.legend(bbox_to_anchor=(.65, 1.1), loc=2, borderaxespad=0.)
     plt.setp(ax.get_yticklabels(), rotation=0)
     if gene_type != None: ax.set_title(gene_type, fontsize=15)
@@ -200,7 +200,7 @@ def visualize_best_estimator_aurocs(estimator_aurocs, gene_type=None, ax=None, t
 all_best_estimator_aurocs_covariates, all_grid_aurocs_covariates = train_and_evaluate(covariates, pipeline)
 
 
-# In[22]:
+# In[26]:
 
 # Visualize covariates data
 visualize_best_estimator_aurocs(all_best_estimator_aurocs_covariates, training_data_type='covariates')
@@ -213,7 +213,7 @@ visualize_grid_aurocs(all_grid_aurocs_covariates)
 all_best_estimator_aurocs_expression, all_grid_aurocs_expression = train_and_evaluate(expression_select, pipeline)
 
 
-# In[23]:
+# In[27]:
 
 # Visualize expression data
 visualize_best_estimator_aurocs(all_best_estimator_aurocs_expression, training_data_type='expression')
@@ -226,14 +226,14 @@ visualize_grid_aurocs(all_grid_aurocs_expression)
 all_best_estimator_aurocs_combined, all_grid_aurocs_combined = train_and_evaluate(combined, pipeline)
 
 
-# In[24]:
+# In[28]:
 
 # Visualize combined data
 visualize_best_estimator_aurocs(all_best_estimator_aurocs_combined, training_data_type='expression')
 visualize_grid_aurocs(all_grid_aurocs_combined)
 
 
-# In[18]:
+# In[31]:
 
 # Display difference in auroc between combined and covariates only 
 diff_aurocs = all_best_estimator_aurocs_combined.iloc[:,0:3] - all_best_estimator_aurocs_covariates.iloc[:,0:3]
