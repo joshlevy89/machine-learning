@@ -11,7 +11,7 @@
 #     -covariates+expression
 # 3) Pca performed instead of feature selection.
 
-# In[41]:
+# In[17]:
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -36,45 +36,63 @@ import warnings
 warnings.filterwarnings("ignore") # ignore deprecation warning for grid_scores_
 
 
-# In[42]:
+# In[18]:
 
 get_ipython().magic('matplotlib inline')
 plt.style.use('seaborn-notebook')
 
 
-# In[43]:
+# In[19]:
 
-get_ipython().run_cell_magic('time', '', "path = os.path.join('..', '..', 'download', 'covariates.tsv')\ncovariates = pd.read_table(path, index_col=0)")
-
-
-# In[44]:
-
-get_ipython().run_cell_magic('time', '', "path = os.path.join('..', '..', 'download', 'expression-matrix.tsv.bz2')\nexpression = pd.read_table(path, index_col=0)")
+path = os.path.join('..', '..', 'download', 'covariates.tsv')
+covariates = pd.read_table(path, index_col=0)
 
 
-# In[45]:
+# In[20]:
 
-get_ipython().run_cell_magic('time', '', "path = os.path.join('..','..','download', 'mutation-matrix.tsv.bz2')\nY = pd.read_table(path, index_col=0)")
-
-
-# In[67]:
-
-get_ipython().run_cell_magic('time', '', '# Pre-process expression data for use later\nn_components = 65\nscaled_expression = StandardScaler().fit_transform(expression)\npca = PCA(n_components).fit(scaled_expression)\nexplained_variance = pca.explained_variance_\nexpression_pca = pca.transform(scaled_expression)\nexpression_pca = pd.DataFrame(expression_pca)\nexpression_pca = expression_pca.set_index(expression.index.values)')
+# Select acronym_x and n_mutations_log1p covariates only
+selected_cols = [col for col in covariates.columns if 'acronym_' in col]
+selected_cols.append('n_mutations_log1p')
+covariates = covariates[selected_cols]
 
 
-# In[75]:
+# In[21]:
+
+path = os.path.join('..', '..', 'download', 'expression-matrix.tsv.bz2')
+expression = pd.read_table(path, index_col=0)
+
+
+# In[22]:
+
+path = os.path.join('..','..','download', 'mutation-matrix.tsv.bz2')
+Y = pd.read_table(path, index_col=0)
+
+
+# In[23]:
+
+# Pre-process expression data for use later
+n_components = 65
+scaled_expression = StandardScaler().fit_transform(expression)
+pca = PCA(n_components).fit(scaled_expression)
+explained_variance = pca.explained_variance_
+expression_pca = pca.transform(scaled_expression)
+expression_pca = pd.DataFrame(expression_pca)
+expression_pca = expression_pca.set_index(expression.index.values)
+
+
+# In[24]:
 
 print('fraction of variance explained: ' + str(pca.explained_variance_ratio_.sum()))
 
 
-# In[47]:
+# In[25]:
 
 # Create combo data set (processed expression + covariates)
 combined = pd.concat([covariates,expression_pca],axis=1)
 combined.shape
 
 
-# In[48]:
+# In[26]:
 
 genes_LungCancer = {
     '207': 'AKT1', 
@@ -127,7 +145,7 @@ genes_Oncogenes = {
 mutations = {**genes_LungCancer, **genes_TumorSuppressors, **genes_Oncogenes}
 
 
-# In[49]:
+# In[27]:
 
 # Define model
 param_fixed = {
@@ -140,7 +158,6 @@ param_grid = {
 }
 
 pipeline = Pipeline(steps=[
-    ('impute', Imputer()),
     ('standardize', StandardScaler()),
     ('classify', SGDClassifier(random_state=0, class_weight='balanced', loss=param_fixed['loss'], 
                                penalty=param_fixed['penalty']))
@@ -149,7 +166,7 @@ pipeline = Pipeline(steps=[
 pipeline = GridSearchCV(estimator=pipeline, param_grid=param_grid, scoring='roc_auc')
 
 
-# In[50]:
+# In[28]:
 
 # Helper training/evaluation functions.
 def train_and_evaluate(data, pipeline):
@@ -205,7 +222,7 @@ def grid_scores_to_df(grid_scores):
     return grid_aurocs
 
 
-# In[77]:
+# In[29]:
 
 # Helper visualization functions.
 def visualize_grid_aurocs(grid_aurocs, gene_type=None, ax=None):
@@ -257,46 +274,43 @@ def visualize_categories(data, plot_type, training_data_type):
         f.suptitle(training_data_type, fontsize=20)
 
 
-# In[52]:
+# In[30]:
 
-# Train with covariates data
-all_best_estimator_aurocs_covariates, all_grid_aurocs_covariates = train_and_evaluate(covariates, pipeline)
+get_ipython().run_cell_magic('time', '', '# Train with covariates data\nall_best_estimator_aurocs_covariates, all_grid_aurocs_covariates = train_and_evaluate(covariates, pipeline)')
 
 
-# In[78]:
+# In[31]:
 
 # Visualize covariates data
 visualize_categories(all_best_estimator_aurocs_covariates, 'best_estimator', 'covariates')
 visualize_categories(all_grid_aurocs_covariates, 'grid', 'covariates')
 
 
-# In[54]:
+# In[32]:
 
-# Train expression data
-all_best_estimator_aurocs_expression, all_grid_aurocs_expression = train_and_evaluate(expression_pca, pipeline)
+get_ipython().run_cell_magic('time', '', '# Train expression data\nall_best_estimator_aurocs_expression, all_grid_aurocs_expression = train_and_evaluate(expression_pca, pipeline)')
 
 
-# In[79]:
+# In[33]:
 
 # Visualize expression data
 visualize_categories(all_best_estimator_aurocs_expression, 'best_estimator', 'expression')
 visualize_categories(all_grid_aurocs_expression, 'grid', 'expression')
 
 
-# In[56]:
+# In[34]:
 
-# Train with combined data
-all_best_estimator_aurocs_combined, all_grid_aurocs_combined = train_and_evaluate(combined, pipeline)
+get_ipython().run_cell_magic('time', '', '# Train with combined data\nall_best_estimator_aurocs_combined, all_grid_aurocs_combined = train_and_evaluate(combined, pipeline)')
 
 
-# In[80]:
+# In[35]:
 
 # Visualize combined data
 visualize_categories(all_best_estimator_aurocs_combined, 'best_estimator', 'combined')
 visualize_categories(all_grid_aurocs_combined, 'grid', 'combined')
 
 
-# In[81]:
+# In[36]:
 
 # Display difference in auroc between combined and covariates only 
 diff_aurocs = all_best_estimator_aurocs_combined.iloc[:,0:3] - all_best_estimator_aurocs_covariates.iloc[:,0:3]
@@ -304,7 +318,7 @@ diff_aurocs['symbol'] = all_best_estimator_aurocs_combined.iloc[:,-1]
 visualize_categories(diff_aurocs, 'best_estimator', 'marginal gain')
 
 
-# In[59]:
+# In[37]:
 
 # Summary stats on marginal gain.
 def visualize_marginal_gain(data, title, ax):
@@ -322,7 +336,7 @@ visualize_marginal_gain([a1,a2,a3], 'Mean marginal gain',ax2)
 visualize_marginal_gain([m1,m2,m3], 'Median marginal gain',ax3)
 
 
-# In[76]:
+# In[38]:
 
 # Is there a relationship between marginal gain and number of mutations?
 def visualize_marginal_vs_n_mutations(auroc_type,color,ax):
