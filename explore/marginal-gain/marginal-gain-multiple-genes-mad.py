@@ -44,20 +44,31 @@ plt.style.use('seaborn-notebook')
 
 # In[3]:
 
-get_ipython().run_cell_magic('time', '', "path = os.path.join('..', '..', 'download', 'covariates.tsv')\ncovariates = pd.read_table(path, index_col=0)")
+path = os.path.join('..', '..', 'download', 'covariates.tsv')
+covariates = pd.read_table(path, index_col=0)
 
 
 # In[4]:
 
-get_ipython().run_cell_magic('time', '', "path = os.path.join('..', '..', 'download', 'expression-matrix.tsv.bz2')\nexpression = pd.read_table(path, index_col=0)")
+# Select acronym_x and n_mutations_log1p covariates only
+selected_cols = [col for col in covariates.columns if 'acronym_' in col]
+selected_cols.append('n_mutations_log1p')
+covariates = covariates[selected_cols]
 
 
 # In[5]:
 
-get_ipython().run_cell_magic('time', '', "path = os.path.join('..','..','download', 'mutation-matrix.tsv.bz2')\nY = pd.read_table(path, index_col=0)")
+path = os.path.join('..', '..', 'download', 'expression-matrix.tsv.bz2')
+expression = pd.read_table(path, index_col=0)
 
 
 # In[6]:
+
+path = os.path.join('..','..','download', 'mutation-matrix.tsv.bz2')
+Y = pd.read_table(path, index_col=0)
+
+
+# In[7]:
 
 # Pre-process expression data for use later
 def fs_mad(x,y):
@@ -73,14 +84,14 @@ expression_select = pd.DataFrame(expression_select)
 expression_select = expression_select.set_index(expression.index.values)
 
 
-# In[7]:
+# In[8]:
 
 # Create combo data set (processed expression + covariates)
 combined = pd.concat([covariates,expression_select],axis=1)
 combined.shape
 
 
-# In[8]:
+# In[9]:
 
 genes_LungCancer = {
     '207': 'AKT1', 
@@ -133,7 +144,7 @@ genes_Oncogenes = {
 mutations = {**genes_LungCancer, **genes_TumorSuppressors, **genes_Oncogenes}
 
 
-# In[9]:
+# In[10]:
 
 # Define model
 param_fixed = {
@@ -146,7 +157,6 @@ param_grid = {
 }
 
 pipeline = Pipeline(steps=[
-    ('impute', Imputer()),
     ('standardize', StandardScaler()),
     ('classify', SGDClassifier(random_state=0, class_weight='balanced', loss=param_fixed['loss'], 
                                penalty=param_fixed['penalty']))
@@ -155,7 +165,7 @@ pipeline = Pipeline(steps=[
 pipeline = GridSearchCV(estimator=pipeline, param_grid=param_grid, scoring='roc_auc')
 
 
-# In[10]:
+# In[11]:
 
 # Helper training/evaluation functions.
 def train_and_evaluate(data, pipeline):
@@ -211,7 +221,7 @@ def grid_scores_to_df(grid_scores):
     return grid_aurocs
 
 
-# In[22]:
+# In[12]:
 
 # Helper visualization functions.
 def visualize_grid_aurocs(grid_aurocs, gene_type=None, ax=None):
@@ -263,46 +273,43 @@ def visualize_categories(data, plot_type, training_data_type):
         f.suptitle(training_data_type, fontsize=20)
 
 
-# In[12]:
+# In[13]:
 
-# Train with covariates data
-all_best_estimator_aurocs_covariates, all_grid_aurocs_covariates = train_and_evaluate(covariates, pipeline)
+get_ipython().run_cell_magic('time', '', '# Train with covariates data\nall_best_estimator_aurocs_covariates, all_grid_aurocs_covariates = train_and_evaluate(covariates, pipeline)')
 
 
-# In[23]:
+# In[14]:
 
 # Visualize covariates data
 visualize_categories(all_best_estimator_aurocs_covariates, 'best_estimator', 'covariates')
 visualize_categories(all_grid_aurocs_covariates, 'grid', 'covariates')
 
 
-# In[14]:
+# In[15]:
 
-# Train expression data
-all_best_estimator_aurocs_expression, all_grid_aurocs_expression = train_and_evaluate(expression_select, pipeline)
+get_ipython().run_cell_magic('time', '', '# Train expression data\nall_best_estimator_aurocs_expression, all_grid_aurocs_expression = train_and_evaluate(expression_select, pipeline)')
 
 
-# In[24]:
+# In[16]:
 
 # Visualize expression data
 visualize_categories(all_best_estimator_aurocs_expression, 'best_estimator', 'expression')
 visualize_categories(all_grid_aurocs_expression, 'grid', 'expression')
 
 
-# In[16]:
+# In[17]:
 
-# Train with combined data
-all_best_estimator_aurocs_combined, all_grid_aurocs_combined = train_and_evaluate(combined, pipeline)
+get_ipython().run_cell_magic('time', '', '# Train with combined data\nall_best_estimator_aurocs_combined, all_grid_aurocs_combined = train_and_evaluate(combined, pipeline)')
 
 
-# In[25]:
+# In[19]:
 
 # Visualize combined data
 visualize_categories(all_best_estimator_aurocs_combined, 'best_estimator', 'combined')
 visualize_categories(all_grid_aurocs_combined, 'grid', 'combined')
 
 
-# In[26]:
+# In[20]:
 
 # Display difference in auroc between combined and covariates only 
 diff_aurocs = all_best_estimator_aurocs_combined.iloc[:,0:3] - all_best_estimator_aurocs_covariates.iloc[:,0:3]
@@ -310,7 +317,7 @@ diff_aurocs['symbol'] = all_best_estimator_aurocs_combined.iloc[:,-1]
 visualize_categories(diff_aurocs, 'best_estimator', 'marginal gain')
 
 
-# In[19]:
+# In[21]:
 
 # Summary stats on marginal gain.
 def visualize_marginal_gain(data, title, ax):
@@ -328,7 +335,7 @@ visualize_marginal_gain([a1,a2,a3], 'Mean marginal gain',ax2)
 visualize_marginal_gain([m1,m2,m3], 'Median marginal gain',ax3)
 
 
-# In[27]:
+# In[22]:
 
 # Is there a relationship between marginal gain and number of mutations?
 def visualize_marginal_vs_n_mutations(auroc_type,color,ax):
